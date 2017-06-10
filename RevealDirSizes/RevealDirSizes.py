@@ -11,9 +11,9 @@ class AprilDirectory:
 
     def GetLogicalDriveList(self):
         if 'Windows' == platform.system():
-            print 'windows!'
+            print( "Windows!" )
 
-    def GetDiskSize(self, dir, format="MB"):
+    def GetDiskSize( self, dir, format="MB" ):
         dir += '\\'
         if 'Windows' == platform.system():
             totalBytes = ctypes.c_ulonglong(0)
@@ -21,7 +21,7 @@ class AprilDirectory:
             convertedSize = int(totalBytes.value/self.capacityInfo[format.upper()])
             return convertedSize
 
-    def GetDiskFreeSpaceSize(self, dir, format="MB"):
+    def GetDiskFreeSpaceSize( self, dir, format="MB" ):
         dir += '\\'
         if 'Windows' == platform.system():
             freeBytes = ctypes.c_ulonglong(0)
@@ -29,9 +29,9 @@ class AprilDirectory:
             convertedSize = int(freeBytes.value/self.capacityInfo[format.upper()])
             return convertedSize
 
-    def GetDirectorySize(self, startpath = '.'):
+    def GetDirectorySize( self, startpath = '.' ):
         totalSize = 0
-        for dirpath, dirnames, filenames in os.walk(startpath):
+        for dirpath, dirnames, filenames in os.walk( startpath ):
             for eachFile in filenames:
                 fp = os.path.join(dirpath, eachFile)
                 totalSize += os.path.getsize(fp)
@@ -61,14 +61,13 @@ class AprilDirectory:
         return sizeText
         
 if __name__ == "__main__":
-    print platform.system()
     myDirectory = AprilDirectory()
 
-    targetPath = raw_input( 'input dir path: ' )
+    targetPath = input( "input dir path: " )
     dirs = os.listdir( targetPath )
 
     for file in dirs:
         eachdir = targetPath + file
-        dirSize = myDirectory.GetDirectorySize(eachdir)
+        dirSize = myDirectory.GetDirectorySize( eachdir )
 
-        print("dir: " + eachdir + ", size: " + dirSize)
+        print( "dir: " + eachdir + ", size: " + dirSize )
