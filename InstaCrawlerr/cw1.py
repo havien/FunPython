@@ -1,3 +1,8 @@
+"""
+내가 제일 좋아하는 시바견 마메스케(豆助) "instagram.com/mamesuke0318' 의 
+인스타그램의 사진과 비디오를 간직하기 위해 만듬
+"""
+
 # -*- coding: utf-8 -*-
 from bs4 import BeautifulSoup
 from time import gmtime, strftime
@@ -48,12 +53,6 @@ def FindOutOS():
     # Windows
     """
 
-def DownloadFile( fileURL, wishFileName, extension ):
-    if "Linux" == FindOutOS():
-        DownloadFileLinux( fileURL, wishFileName, extension )
-    elif "Darwin" == FindOutOS():
-        DownloadFileOnmacOS( fileURL, wishFileName, extension )
-
 def DownloadFileOnmacOS( fileURL, wishFileName, extension ):
     cmd = "curl \"" + fileURL + "\" -o " + wishFileName + "." + extension 
     os.system( cmd )
@@ -61,6 +60,14 @@ def DownloadFileOnmacOS( fileURL, wishFileName, extension ):
 def DownloadFileLinux( fileURL, wishFileName, extension ):
     cmd = "wget \"" + fileURL #+ "\" -o " + wishFileName + "." + extension 
     os.system( cmd )
+
+def DownloadFile( fileURL, wishFileName, extension ):
+    if "Linux" == FindOutOS():
+        DownloadFileLinux( fileURL, wishFileName, extension )
+    elif "Darwin" == FindOutOS():
+        DownloadFileOnmacOS( fileURL, wishFileName, extension )
+    elif "Windows" == FindOutOS():
+        DownloadFileOnmacOS( fileURL, wishFileName, extension )
 
 def getContent( url, delay = 5 ):
     #"Download Web Page.."
@@ -235,6 +242,9 @@ if __name__ == '__main__':
             nextMaxID = 0
 
             isVideo = False
+            
+            isSavedFirstPageCode = False
+            pageFirstInstaCode = ""
 
             if -1 == findIndex:
                 break
@@ -270,8 +280,9 @@ if __name__ == '__main__':
                 codeEndIndex = findResult.find( "\",", findIndex+codeStringLen )
 
                 instaCode = findResult[(findIndex+codeStringLen):codeEndIndex]
-                print( instaCode )
-                raise SystemExit
+
+                if False == isSavedFirstPageCode:
+                    pageFirstInstaCode = instaCode
 
                 startFindVideoPosition = (findIndex-20)
                 endFindVideoPosition = (startFindVideoPosition+50)
@@ -283,7 +294,7 @@ if __name__ == '__main__':
                 if -1 != videofindIndex:
                     isVideo = True
 
-                # is photo Sidecar(multi-photo)
+                # is photo Sidecar? (multi-photo)
                 isSideCar = IsPhotoSidecar( findResult, findIndex )
 
                 # instaCode save
@@ -310,7 +321,7 @@ if __name__ == '__main__':
 
                 for eachInstaPhoto in instagramPhotos:
                     numberOfFiles += 1
-                    DownloadFileOnmacOS( eachInstaPhoto.url, instaID + "/" + str( numberOfFiles ), "jpg" )
+                    DownloadFile( eachInstaPhoto.url, instaID + "/" + str( numberOfFiles ), "jpg" )
 
                     # multi-photo page's photo download.
                     if True == eachInstaPhoto.isSideCar:
@@ -338,7 +349,7 @@ if __name__ == '__main__':
                         multiNumber = 1
                         for eachPhotoURL in multiPhotos:
                             multiPhotoFileName = str( numberOfFiles ) + "_" + str( multiNumber )
-                            DownloadFileOnmacOS( eachPhotoURL, instaID + "/" + multiPhotoFileName, "jpg" )
+                            DownloadFile( eachPhotoURL, instaID + "/" + multiPhotoFileName, "jpg" )
 
                             multiNumber += 1
 
@@ -357,7 +368,7 @@ if __name__ == '__main__':
                         videoFileTag = videosoup.find( "meta", property="og:video" )
                         if None != type( videoFileTag ):
                             numberOfFiles += 1
-                            DownloadFileOnmacOS( videoFileTag["content"], instaID + "/" + str( numberOfFiles ) + "_video", "mp4" )
+                            DownloadFile( videoFileTag["content"], instaID + "/" + str( numberOfFiles ) + "_video", "mp4" )
                             totalSavedVideoCount += 1
 
                             time.sleep( 0.1 )
