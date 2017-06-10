@@ -1,6 +1,5 @@
 """
-내가 제일 좋아하는 시바견 마메스케(豆助) "instagram.com/mamesuke0318' 의 
-인스타그램의 사진과 비디오를 간직하기 위해 만듬
+내가 제일 좋아하는 시바견 마메스케(豆助) 'instagram.com/mamesuke0318' 의 인스타그램의 사진과 비디오를 간직하기 위해 만듬
 """
 
 # -*- coding: utf-8 -*-
@@ -32,6 +31,7 @@ curMaxID = ""
 nextMaxIDEndPosition = 0
 terminate = False
 
+totalInstaPageCount = 0
 totalSavedPhotoCount = 0
 totalSavedVideoCount = 0
 
@@ -192,7 +192,12 @@ if __name__ == '__main__':
     if len( instaID ) == 0:
         instaID = "mamesuke0318"
 
-    startTime = datetime.datetime.now().replace(microsecond=0)
+    saveDir = input( "please input save directory: " )
+
+    if len( saveDir ) == 0:
+        saveDir = "/Users/jiyeolpyo/Downloads/Instagram/"
+
+    startTime = datetime.datetime.now().replace( microsecond=0 )
     PrintLocalTimeNow()
 
     while True:
@@ -202,7 +207,8 @@ if __name__ == '__main__':
             endTime = datetime.datetime.now().replace(microsecond=0)
             PrintLocalTimeNow()
 
-            print("working time: " + str(endTime - startTime) )
+            print( "working time: " + str(endTime - startTime) )
+            print( "total instagram page count : " + str( len( instagramPhotos ) ) )
             print( "total saved photo count: " + str( totalSavedPhotoCount ) )
             print( "total saved video count: " + str( totalSavedVideoCount ) )
 
@@ -298,7 +304,7 @@ if __name__ == '__main__':
                 isSideCar = IsPhotoSidecar( findResult, findIndex )
 
                 # instaCode save
-                if 11 != len( instaCode ):
+                if 1 >= len( instaCode ):
                     print( "find code error!!!!" + instaCode )
 
                 #print( DetermineInstaPhotoTakenTime( findResult ) )
@@ -311,10 +317,17 @@ if __name__ == '__main__':
                     #print( instaCode + "\n" )
 
             if 0 < len( instagramPhotos ):
+                fullsaveDir = saveDir + instaID
+                
+                if False == os.path.exists( saveDir ):
+                    os.mkdir( saveDir )
+                
+                os.chdir( saveDir )
+
                 if False == os.path.exists( instaID ):
                     print( "try create to instagram identifier directory [" + instaID + "]" )
                     os.mkdir( instaID )
-                    #print( "instagram identifier directory [" + instaID + "] is already exists!" )                
+                    #print( "instagram identifier directory [" + instaID + "] is already exists!" )
 
                 listDir = os.listdir( instaID )
                 numberOfFiles = len( listDir )
