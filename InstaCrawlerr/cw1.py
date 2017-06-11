@@ -16,7 +16,9 @@ import ssl
 import codecs
 #import platform
 
-ssl._create_default_https_context = ssl._create_unverified_context
+#ssl._create_default_https_context = ssl._create_unverified_context
+
+context = ssl._create_unverified_context()
 
 crawlerName = "crawFirst_instagram"
 mainURL = "https://www.instagram.com/"
@@ -228,7 +230,7 @@ if __name__ == '__main__':
         #instaURL = "https://www.instagram.com/mamesuke0318/?max_id=1513469714222072146"
 
         try:
-            contents = contents = urllib.request.urlopen( instaURL )
+            contents = contents = urllib.request.urlopen( instaURL, context=context )
             soup = BeautifulSoup( contents.read(), "html.parser" )
 
             findResult = soup.find( string = re.compile( "window._sharedData" ) )
@@ -343,7 +345,7 @@ if __name__ == '__main__':
 
                         time.sleep( 0.2 )
 
-                        pContents = urllib.request.urlopen( instaPageURL )
+                        pContents = urllib.request.urlopen( instaPageURL, context=context )
                         pSoup = BeautifulSoup( pContents.read(), "html.parser" )
 
                         findResult = pSoup.find( string = re.compile( "window._sharedData" ) )
@@ -375,7 +377,7 @@ if __name__ == '__main__':
 
                         time.sleep( 0.2 )
 
-                        videocontents = urllib.request.urlopen( fullVideoPageURL )
+                        videocontents = urllib.request.urlopen( fullVideoPageURL, context=context )
                         videosoup = BeautifulSoup( videocontents.read(), "html.parser" )
 
                         videoFileTag = videosoup.find( "meta", property="og:video" )
