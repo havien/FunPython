@@ -37,6 +37,9 @@ totalInstaPageCount = 0
 totalSavedPhotoCount = 0
 totalSavedVideoCount = 0
 
+lastCrawlingCode = ""
+pageFirstInstaCode = ""
+
 def PrintLocalTimeNow():
     print("[current time : " + str( strftime("%Y-%m-%d %H:%M:%S", time.localtime())) + "]" )
 
@@ -70,6 +73,15 @@ def DownloadFile( fileURL, wishFileName, extension ):
         DownloadFileOnmacOS( fileURL, wishFileName, extension )
     elif "Windows" == FindOutOS():
         DownloadFileOnmacOS( fileURL, wishFileName, extension )
+
+def DownloadVideoFile( pageURL, wishFileName ):
+    videocontents = urllib.request.urlopen( pageURL, context = context )
+    videosoup = BeautifulSoup( videocontents.read(), "html.parser" )
+
+    videoFileTag = videosoup.find( "meta", property = "og:video" )
+    if None != type( videoFileTag ):
+        DownloadFile( videoFileTag["content"], wishFileName, "mp4" )
+
 
 def getContent( url, delay = 5 ):
     #"Download Web Page.."
@@ -161,6 +173,15 @@ def DetermineInstaMultiPhotoURL( urlString, startPosition ):
     else:
         return ""
 
+def DetermineInstaPhotosVideoURL( urlString, startPosition ):
+    FindIndex = urlString.find( "\"video_url\": \"", startPosition )
+    EndIndex = urlString.find( ".mp4", jpgFindIndex+1 )
+
+    if -1 != FindIndex and -1 != EndIndex:
+        return urlString[(FindIndex+14):(EndIndex+4)]
+    else:
+        return ""
+
 def DetermineInstaPhotoTakenTime( urlString ):
     startIndex = urlString.find( "\"taken_at_timestamp\": \"", 5000 )
     if -1 == startIndex:
@@ -202,8 +223,30 @@ if __name__ == '__main__':
     startTime = datetime.datetime.now().replace( microsecond=0 )
     PrintLocalTimeNow()
 
+    dbcon = sqlite3.connect( "InstagramInfo.db" )
+    dbcon.isolation_level = None
+    dbcursor = dbcon.cursor()
+
+    dbcursor.execute( "CREATE TABLE IF NOT EXISTS tb_latest_code( id varchar(64), code varchar(30) )" )
+    dbcursor.execute( "SELECT id FROM tb_latest_code WHERE id = :id", {"id": instaID})
+
+    row = dbcursor.fetchone()
+    if row is None:
+        dbcursor.execute( "INSERT INTO tb_latest_code( id ) VALUES ( :id )", {"id": instaID} )
+
+    dbcursor.execute( "SELECT code FROM tb_latest_code WHERE id = :Id", {"Id": instaID} )
+    latestWorkCode = dbcursor.fetchone()[0]
+
+    isSavedFirstPageCode = False
+
+
     while True:
         if True == terminate:
+            dbcursor.execute( "UPDATE tb_latest_code SET code = :code WHERE id = :id",
+                              {"id": instaID, "code": pageFirstInstaCode} )
+
+            print( "pageFirstInstaCode : " + pageFirstInstaCode )
+
             print( "no more instagram page! end work!" )
 
             endTime = datetime.datetime.now().replace(microsecond=0)
@@ -250,9 +293,6 @@ if __name__ == '__main__':
             nextMaxID = 0
 
             isVideo = False
-            
-            isSavedFirstPageCode = False
-            pageFirstInstaCode = ""
 
             if -1 == findIndex:
                 break
@@ -280,6 +320,7 @@ if __name__ == '__main__':
                             nextInstaMaxID = searchNextMaxID( prevFindIndex, findResult, 3 )
 
                     if 5 > len( nextInstaMaxID ):
+                        lastCrawlingCode = instaCode
                         terminate = True
 
                     break
@@ -291,6 +332,12 @@ if __name__ == '__main__':
 
                 if False == isSavedFirstPageCode:
                     pageFirstInstaCode = instaCode
+                    isSavedFirstPageCode = True
+
+                if latestWorkCode == instaCode:
+                    print( "this instagram page(" + instaCode + ") already crawling" )
+                    terminate = True
+                    break
 
                 startFindVideoPosition = (findIndex-20)
                 endFindVideoPosition = (startFindVideoPosition+50)
@@ -336,7 +383,10 @@ if __name__ == '__main__':
 
                 for eachInstaPhoto in instagramPhotos:
                     numberOfFiles += 1
-                    DownloadFile( eachInstaPhoto.url, instaID + "/" + str( numberOfFiles ), "jpg" )
+
+                    # normal photo.
+                    if False == eachInstaPhoto.isSideCar and False == eachInstaPhoto.isVideo:
+                        DownloadFile( eachInstaPhoto.url, instaID + "/" + str( numberOfFiles ), "jpg" )
 
                     # multi-photo page's photo download.
                     if True == eachInstaPhoto.isSideCar:
@@ -351,23 +401,37 @@ if __name__ == '__main__':
                         findResult = pSoup.find( string = re.compile( "window._sharedData" ) )
                         pFindIndex = 1000
 
+                        multiNumber = 1
                         multiPhotos = set()
+                        multiVideos = set()
 
                         while True:
                             photoURL = DetermineInstaMultiPhotoURL( findResult, (pFindIndex+1) )
                             if "" == photoURL:
                                 break
 
+                            videoURL = DetermineInstaPhotosVideoURL( findResult, (pFindIndex + 1) )
+
+                            if "" != videoURL:
+                                multiVideos.add( videoURL )
+
                             pFindIndex += 300
                             multiPhotos.add( photoURL )
 
-                        multiNumber = 1
                         for eachPhotoURL in multiPhotos:
-                            multiPhotoFileName = str( numberOfFiles ) + "_" + str( multiNumber )
-                            DownloadFile( eachPhotoURL, instaID + "/" + multiPhotoFileName, "jpg" )
+                            multiPhotoFileName = instaID + "/" + str( numberOfFiles ) + "_" + str( multiNumber )
+                            DownloadFile( eachPhotoURL, multiPhotoFileName, "jpg" )
 
                             multiNumber += 1
+                            totalSavedPhotoCount += 1
+                            time.sleep( 0.1 )
 
+                        for eachVideoURL in multiVideos:
+                            multivideoFileName = instaID + "/" + str( numberOfFiles ) + "_" + str( multiNumber )
+                            DownloadFile( eachVideoURL, multivideoFileName, "mp4" )
+
+                            multiNumber += 1
+                            totalSavedVideoCount += 1
                             time.sleep( 0.1 )
 
                     # video download.
@@ -375,21 +439,21 @@ if __name__ == '__main__':
                         fullVideoPageURL = directURL + eachInstaPhoto.code
                         print( "try crawling instagram video! directURL: [" + fullVideoPageURL + "]" )
 
-                        time.sleep( 0.2 )
+                        time.sleep( 0.1 )
 
-                        videocontents = urllib.request.urlopen( fullVideoPageURL, context=context )
-                        videosoup = BeautifulSoup( videocontents.read(), "html.parser" )
+                        #numberOfFiles += 1
+                        DownloadVideoFile( fullVideoPageURL,  instaID + "/" + str( numberOfFiles ) + "_video" )
+                        totalSavedVideoCount += 1
 
-                        videoFileTag = videosoup.find( "meta", property="og:video" )
-                        if None != type( videoFileTag ):
-                            numberOfFiles += 1
-                            DownloadFile( videoFileTag["content"], instaID + "/" + str( numberOfFiles ) + "_video", "mp4" )
-                            totalSavedVideoCount += 1
+                        time.sleep( 0.1 )
 
-                            time.sleep( 0.1 )
+                    totalSavedPhotoCount += 1
 
-                    totalSavedPhotoCount += 1;
-
-        except Exception as e: 
+        except urllib.error.HTTPError as err:
+            if err.code == 404:
+                print( "not found web page!!!" )
+        except Exception as e:
             print( e )
             traceback.print_exc()
+
+    dbcon.close()
