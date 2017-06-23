@@ -1,5 +1,6 @@
 """
-내가 제일 좋아하는 시바견 마메스케(豆助) 'instagram.com/mamesuke0318' 의 인스타그램의 사진과 비디오를 간직하기 위해 만듬
+내가 제일 좋아하는 시바견 마메스케(豆助) 'instagram.com/mamesuke0318' 의
+인스타그램 사진과 비디오를 간직하기 위해 만듬
 """
 
 # -*- coding: utf-8 -*-
@@ -23,22 +24,18 @@ context = ssl._create_unverified_context()
 crawlerName = "crawFirst_instagram"
 mainURL = "https://www.instagram.com/"
 directURL = mainURL + "p/"
-
-instaID = ""
 instaURL = ""
-nextInstaMaxID = ""
 
 wantTagPosition = 15
 curMaxID = ""
 nextMaxIDEndPosition = 0
-terminate = False
 
 totalInstaPageCount = 0
 totalSavedPhotoCount = 0
 totalSavedVideoCount = 0
 
 lastCrawlingCode = ""
-pageFirstInstaCode = ""
+
 
 def PrintLocalTimeNow():
     print("[current time : " + str( strftime("%Y-%m-%d %H:%M:%S", time.localtime())) + "]" )
@@ -175,7 +172,7 @@ def DetermineInstaMultiPhotoURL( urlString, startPosition ):
 
 def DetermineInstaPhotosVideoURL( urlString, startPosition ):
     FindIndex = urlString.find( "\"video_url\": \"", startPosition )
-    EndIndex = urlString.find( ".mp4", jpgFindIndex+1 )
+    EndIndex = urlString.find( ".mp4", FindIndex+1 )
 
     if -1 != FindIndex and -1 != EndIndex:
         return urlString[(FindIndex+14):(EndIndex+4)]
@@ -207,38 +204,27 @@ class InstagramInfo:
         self.isVideo = isVideo
         self.isSideCar = isSideCar
 
-if __name__ == '__main__':
-    print( "crap Instagram crawler version 0.1" )
+def crawlingInstagram( instaID, dbcursur ):
+    terminate = False
+    nextInstaMaxID = ""
+    instaCode = ""
+    pageFirstInstaCode = ""
 
-    instaID = input( "please input crawling target Instagram ID: " )
-
-    if len( instaID ) == 0:
-        instaID = "mamesuke0318"
-
-    saveDir = input( "please input save directory: " )
-
-    if len( saveDir ) == 0:
-        saveDir = "/Users/jiyeolpyo/Downloads/Instagram/"
-
-    startTime = datetime.datetime.now().replace( microsecond=0 )
-    PrintLocalTimeNow()
-
-    dbcon = sqlite3.connect( "InstagramInfo.db" )
-    dbcon.isolation_level = None
-    dbcursor = dbcon.cursor()
-
-    dbcursor.execute( "CREATE TABLE IF NOT EXISTS tb_latest_code( id varchar(64), code varchar(30) )" )
-    dbcursor.execute( "SELECT id FROM tb_latest_code WHERE id = :id", {"id": instaID})
-
-    row = dbcursor.fetchone()
-    if row is None:
-        dbcursor.execute( "INSERT INTO tb_latest_code( id ) VALUES ( :id )", {"id": instaID} )
+    totalInstaPageCount = 0
+    totalSavedPhotoCount = 0
+    totalSavedVideoCount = 0
 
     dbcursor.execute( "SELECT code FROM tb_latest_code WHERE id = :Id", {"Id": instaID} )
     latestWorkCode = dbcursor.fetchone()[0]
+    if latestWorkCode is None:
+        return ""
 
     isSavedFirstPageCode = False
 
+    #saveDir = input( "please input save directory: " )
+
+    #if len( saveDir ) == 0:
+    saveDir = "/Users/jiyeolpyo/Downloads/Instagram/"
 
     while True:
         if True == terminate:
@@ -249,37 +235,38 @@ if __name__ == '__main__':
 
             print( "no more instagram page! end work!" )
 
-            endTime = datetime.datetime.now().replace(microsecond=0)
+            endTime = datetime.datetime.now().replace( microsecond = 0 )
             PrintLocalTimeNow()
 
-            print( "working time: " + str(endTime - startTime) )
+            print( "working time: " + str( endTime - startTime ) )
             print( "total instagram page count : " + str( len( instagramPhotos ) ) )
             print( "total saved photo count: " + str( totalSavedPhotoCount ) )
             print( "total saved video count: " + str( totalSavedVideoCount ) )
 
             break
 
+        instaURL = ""
+
         if 0 == len( nextInstaMaxID ):
             instaURL = mainURL + instaID
         else:
             instaURL = mainURL + instaID + "/?max_id=" + nextInstaMaxID
-        
-        time.sleep( 0.3 )
 
+        time.sleep( 0.3 )
         print( "try begin do crawling" )
         print( "[" + instaURL + "]" )
         time.sleep( 0.1 )
 
-        #instaURL = "https://www.instagram.com/mamesuke0318/?max_id=1513469714222072146"
+        # instaURL = "https://www.instagram.com/mamesuke0318/?max_id=1513469714222072146"
 
         try:
-            contents = contents = urllib.request.urlopen( instaURL, context=context )
+            contents = contents = urllib.request.urlopen( instaURL, context = context )
             soup = BeautifulSoup( contents.read(), "html.parser" )
 
             findResult = soup.find( string = re.compile( "window._sharedData" ) )
 
             thirdExtensionLen = 4
-            codeStringLen = 6+3 # "code" + ": \"""
+            codeStringLen = 6 + 3  # "code" + ": \"""
 
             photoCountOf1Page = 12
 
@@ -306,8 +293,8 @@ if __name__ == '__main__':
                 """
 
                 ## find individual instagram photo's URL code.
-                findIndex = findResult.find( "\"code\"", findIndex+1 )
-                
+                findIndex = findResult.find( "\"code\"", findIndex + 1 )
+
                 nextInstaMaxID = ""
 
                 if -1 == findIndex:
@@ -315,7 +302,7 @@ if __name__ == '__main__':
 
                     if 5 > len( nextInstaMaxID ):
                         nextInstaMaxID = searchNextMaxID( prevFindIndex, findResult, 2 )
-                            
+
                         if 5 > len( nextInstaMaxID ):
                             nextInstaMaxID = searchNextMaxID( prevFindIndex, findResult, 3 )
 
@@ -324,11 +311,11 @@ if __name__ == '__main__':
                         terminate = True
 
                     break
-                
-                prevFindIndex = findIndex
-                codeEndIndex = findResult.find( "\",", findIndex+codeStringLen )
 
-                instaCode = findResult[(findIndex+codeStringLen):codeEndIndex]
+                prevFindIndex = findIndex
+                codeEndIndex = findResult.find( "\",", findIndex + codeStringLen )
+
+                instaCode = findResult[(findIndex + codeStringLen):codeEndIndex]
 
                 if False == isSavedFirstPageCode:
                     pageFirstInstaCode = instaCode
@@ -339,8 +326,8 @@ if __name__ == '__main__':
                     terminate = True
                     break
 
-                startFindVideoPosition = (findIndex-20)
-                endFindVideoPosition = (startFindVideoPosition+50)
+                startFindVideoPosition = (findIndex - 20)
+                endFindVideoPosition = (startFindVideoPosition + 50)
 
                 isVideo = False
                 videofindIndex = findResult.find( "\"is_video\": true", startFindVideoPosition, endFindVideoPosition )
@@ -356,27 +343,27 @@ if __name__ == '__main__':
                 if 1 >= len( instaCode ):
                     print( "find code error!!!!" + instaCode )
 
-                #print( DetermineInstaPhotoTakenTime( findResult ) )
-                photoURL = DetermineInstaPhotoURL( findResult, (findIndex+1) )
+                # print( DetermineInstaPhotoTakenTime( findResult ) )
+                photoURL = DetermineInstaPhotoURL( findResult, (findIndex + 1) )
 
                 newInstagram = InstagramInfo( instaCode, photoURL, isVideo, isSideCar )
                 instagramPhotos.add( newInstagram )
 
-                #for instaCode in videoCodes:
-                    #print( instaCode + "\n" )
+                # for instaCode in videoCodes:
+                # print( instaCode + "\n" )
 
             if 0 < len( instagramPhotos ):
                 fullsaveDir = saveDir + instaID
-                
+
                 if False == os.path.exists( saveDir ):
                     os.mkdir( saveDir )
-                
+
                 os.chdir( saveDir )
 
                 if False == os.path.exists( instaID ):
                     print( "try create to instagram identifier directory [" + instaID + "]" )
                     os.mkdir( instaID )
-                    #print( "instagram identifier directory [" + instaID + "] is already exists!" )
+                    # print( "instagram identifier directory [" + instaID + "] is already exists!" )
 
                 listDir = os.listdir( instaID )
                 numberOfFiles = len( listDir )
@@ -395,7 +382,7 @@ if __name__ == '__main__':
 
                         time.sleep( 0.2 )
 
-                        pContents = urllib.request.urlopen( instaPageURL, context=context )
+                        pContents = urllib.request.urlopen( instaPageURL, context = context )
                         pSoup = BeautifulSoup( pContents.read(), "html.parser" )
 
                         findResult = pSoup.find( string = re.compile( "window._sharedData" ) )
@@ -406,7 +393,7 @@ if __name__ == '__main__':
                         multiVideos = set()
 
                         while True:
-                            photoURL = DetermineInstaMultiPhotoURL( findResult, (pFindIndex+1) )
+                            photoURL = DetermineInstaMultiPhotoURL( findResult, (pFindIndex + 1) )
                             if "" == photoURL:
                                 break
 
@@ -441,8 +428,8 @@ if __name__ == '__main__':
 
                         time.sleep( 0.1 )
 
-                        #numberOfFiles += 1
-                        DownloadVideoFile( fullVideoPageURL,  instaID + "/" + str( numberOfFiles ) + "_video" )
+                        # numberOfFiles += 1
+                        DownloadVideoFile( fullVideoPageURL, instaID + "/" + str( numberOfFiles ) + "_video" )
                         totalSavedVideoCount += 1
 
                         time.sleep( 0.1 )
@@ -455,5 +442,44 @@ if __name__ == '__main__':
         except Exception as e:
             print( e )
             traceback.print_exc()
+
+if __name__ == '__main__':
+    print( "crap Instagram crawler version 0.2" )
+
+    startTime = datetime.datetime.now().replace( microsecond=0 )
+    PrintLocalTimeNow()
+
+    dbcon = sqlite3.connect( "InstagramInfo.db" )
+    dbcon.isolation_level = None
+    dbcursor = dbcon.cursor()
+
+    dbcursor.execute( "CREATE TABLE IF NOT EXISTS tb_latest_code( id varchar(64), code varchar(30) )" )
+    print( "1. crawling registered instagram\r\n2. regist new instagram" )
+
+    command = input()
+
+    if "1" == command:
+        print( "you selected crawling registered instagram" )
+        dbcursor.execute( "SELECT id FROM tb_latest_code ORDER BY id ASC" )
+        rows = dbcursor.fetchall()
+        for eachRow in rows:
+            crawlingInstagram( eachRow[0], dbcursor )
+    elif "2" == command:
+        print( "you selected regist new instagram" )
+
+        instaID = input( "please input crawling target Instagram ID: " )
+
+        if len( instaID ) == 0:
+            instaID = "mamesuke0318"
+
+        dbcursor.execute( "SELECT id FROM tb_latest_code WHERE id = :id", {"id": instaID} )
+
+        row = dbcursor.fetchone()
+        if row is None:
+            dbcursor.execute( "INSERT INTO tb_latest_code( id, code ) VALUES ( :id, '' )", {"id": instaID} )
+        else:
+            print( "already registered instagram id : " + instaID )
+
+        crawlingInstagram( instaID, dbcursor )
 
     dbcon.close()
