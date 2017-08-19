@@ -15,6 +15,8 @@ import time, datetime
 import sqlite3
 import ssl
 import codecs
+import wget
+
 #import platform
 
 #ssl._create_default_https_context = ssl._create_unverified_context
@@ -63,13 +65,19 @@ def DownloadFileLinux( fileURL, wishFileName, extension ):
     cmd = "wget \"" + fileURL #+ "\" -o " + wishFileName + "." + extension 
     os.system( cmd )
 
+def DownloadFileWindows( fileURL, wishFileName, extension ):
+    fullFileName = wishFileName + "." + extension 
+    rtn = wget.download( fileURL, fullFileName )
+
 def DownloadFile( fileURL, wishFileName, extension ):
     if "Linux" == FindOutOS():
         DownloadFileLinux( fileURL, wishFileName, extension )
     elif "Darwin" == FindOutOS():
-        DownloadFileOnmacOS( fileURL, wishFileName, extension )
+        DownloadFileWindows( fileURL, wishFileName, extension )
     elif "Windows" == FindOutOS():
-        DownloadFileOnmacOS( fileURL, wishFileName, extension )
+        DownloadFileWindows( fileURL, wishFileName, extension )
+
+    print( '' )
 
 def DownloadVideoFile( pageURL, wishFileName ):
     videocontents = urllib.request.urlopen( pageURL, context = context )
@@ -78,7 +86,6 @@ def DownloadVideoFile( pageURL, wishFileName ):
     videoFileTag = videosoup.find( "meta", property = "og:video" )
     if None != type( videoFileTag ):
         DownloadFile( videoFileTag["content"], wishFileName, "mp4" )
-
 
 def getContent( url, delay = 5 ):
     #"Download Web Page.."
@@ -224,7 +231,8 @@ def crawlingInstagram( instaID, dbcursur ):
     #saveDir = input( "please input save directory: " )
 
     #if len( saveDir ) == 0:
-    saveDir = "/Users/jiyeolpyo/Downloads/Instagram/"
+    #saveDir = "/Users/jiyeolpyo/Downloads/Instagram/"
+    saveDir = "D:\\crawler\\"
 
     while True:
         if True == terminate:
@@ -444,7 +452,7 @@ def crawlingInstagram( instaID, dbcursur ):
             traceback.print_exc()
 
 if __name__ == '__main__':
-    print( "crap Instagram crawler version 0.2" )
+    print( "crap Instagram crawler version 0.3" )
 
     startTime = datetime.datetime.now().replace( microsecond=0 )
     PrintLocalTimeNow()
@@ -454,18 +462,22 @@ if __name__ == '__main__':
     dbcursor = dbcon.cursor()
 
     dbcursor.execute( "CREATE TABLE IF NOT EXISTS tb_latest_code( id varchar(64), code varchar(30) )" )
-    print( "1. crawling registered instagram\r\n2. regist new instagram" )
+    print( "1. crawling registered instagram" )
+    print( "2. regist new instagram" )
+    print( "3. remove instagram" )
+    print( "4. list of registered instagram" )
+    print( "q. quit" )
 
     command = input()
 
     if "1" == command:
-        print( "you selected crawling registered instagram" )
+        print( "you've selected crawling registered instagram" )
         dbcursor.execute( "SELECT id FROM tb_latest_code ORDER BY id ASC" )
         rows = dbcursor.fetchall()
         for eachRow in rows:
             crawlingInstagram( eachRow[0], dbcursor )
     elif "2" == command:
-        print( "you selected regist new instagram" )
+        print( "you've selected regist new instagram" )
 
         instaID = input( "please input crawling target Instagram ID: " )
 
@@ -481,5 +493,27 @@ if __name__ == '__main__':
             print( "already registered instagram id : " + instaID )
 
         crawlingInstagram( instaID, dbcursor )
+    elif "3" == command:
+        print( "you've selected remove registered instagram" )
 
+        instaID = input( "please input crawling target Instagram ID: " )
+        if 0 == len( instaID ):
+            print( "not exists instaID [" + instaID + "]" )
+        elif 0 < len( instaID ):
+            dbcursor.execute( "DELETE FROM tb_latest_code WHERE id = :id", {"id": instaID} )
+    elif "4" == command:
+        print( "you've selected list of registered instagram's" )
+
+        dbcursor.execute( "SELECT id FROM tb_latest_code ORDER BY id ASC" )
+        rows = dbcursor.fetchall()
+
+        print( "----------------------------------------" )
+        for eachRow in rows:
+            print( "[" + eachRow[0] + "]" )
+        print( "----------------------------------------" )
+            
+    elif "q" == command:
+        print( "you've selected exit" )
+
+    dbcon.commit()
     dbcon.close()
